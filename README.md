@@ -32,13 +32,8 @@ and enable `Developer mode`
   <summary>Which blocks on the YouTube page will be hidden?</summary>
 
 1. The Shorts section on the YouTube homepage
-
 2. The Shorts section in the sidebar
-   ![The Shorts section in the sidebar](assets/docs/1.png)
-
 3. The Shorts section in the search results
-   ![The Shorts section in the search results](assets/docs/2.png)
-
 4. The Shorts section next to the video being played
-   ![The Shorts section next to the video being played](assets/docs/3.png)
+
 </details>
