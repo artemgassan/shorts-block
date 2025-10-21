@@ -10,7 +10,7 @@
 // @license      MIT
 // ==/UserScript==
 
-// ------- VARIABLES -------
+// ------- YOUTUBE VARIABLES -------
 
 const KEYWORD = 'shorts';
 
@@ -83,16 +83,27 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 // ------- ROUTING -------
 
-function isChannelPage() {
+function getCurrentChannelId() {
   const pathname = window.location.pathname;
   const channelPatterns = [
-    /\/@[\w-]+/,           // - youtube.com/@username
-    /\/c\/[\w-]+/,         // - youtube.com/c/channelname
-    /\/channel\/[\w-]+/,   // - youtube.com/channel/UCxxxxxxx
-    /\/user\/[\w-]+/       // - youtube.com/user/username
+    /\/@([\w-]+)/,           // - youtube.com/@username
+    /\/c\/([\w-]+)/,         // - youtube.com/c/channelname
+    /\/channel\/([\w-]+)/,   // - youtube.com/channel/UCxxxxxxx
+    /\/user\/([\w-]+)/       // - youtube.com/user/username
   ];
 
-  return channelPatterns.some(pattern => pattern.test(pathname));
+  for (const pattern of channelPatterns) {
+    const match = pathname.match(pattern);
+    if (match) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
+function isChannelPage() {
+  return getCurrentChannelId() !== null;
 }
 
 function setupRouting() {
@@ -103,6 +114,12 @@ function setupRouting() {
       if (!button || !document.body.contains(button)) {
         createToggleButton();
         button = document.getElementById('shortsblock-toggle-btn');
+      } else {
+        const channelId = getCurrentChannelId();
+        if (channelId) {
+          const isExcluded = isChannelExcluded(channelId);
+          updateButtonState(button, isExcluded);
+        }
       }
     } else {
       if (button && document.body.contains(button)) {
@@ -127,21 +144,67 @@ function setupRouting() {
   window.addEventListener('popstate', updateButtonVisibility);
 }
 
+
+
 // ------- LOCAL STORAGE -------
 
-// TODO
+const STORAGE_KEY = 'shortsblock-excluded-channels';
+
+function getExcludedChannels() {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveExcludedChannels(channels) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(channels));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function isChannelExcluded(channelId) {
+  const excluded = getExcludedChannels();
+  return excluded.includes(channelId);
+}
+
+function toggleChannelExclusion(channelId) {
+  if (!channelId) return false;
+
+  const excluded = getExcludedChannels();
+  const index = excluded.indexOf(channelId);
+
+  if (index === -1) {
+    excluded.push(channelId);
+  } else {
+    excluded.splice(index, 1);
+  }
+
+  return saveExcludedChannels(excluded);
+}
 
 
 
 // ------- VIEW -------
 
 function createButtonStyles() {
+  if (document.getElementById('shortsblock-styles')) {
+    return;
+  }
+
   const style = document.createElement('style');
+  style.id = 'shortsblock-styles';
   style.textContent = `
     :root {
       --btn-bg: #cc0000;
       --btn-color: white;
       --btn-shadow: rgba(0, 0, 0, 0.3);
+      --btn-bg-excluded: #065fd4;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -149,21 +212,41 @@ function createButtonStyles() {
         --btn-bg: #f1f1f1;
         --btn-color: #0f0f0f;
         --btn-shadow: rgba(255, 255, 255, 0.2);
+        --btn-bg-excluded: #3ea6ff;
       }
     }
   `;
   document.head.appendChild(style);
 }
 
+function updateButtonState(button, isExcluded) {
+  const span = button.querySelector('span');
+
+  if (isExcluded) {
+    button.style.background = 'var(--btn-bg-excluded)';
+    if (span) span.textContent = 'Shorts: ON';
+  } else {
+    button.style.background = 'var(--btn-bg)';
+    if (span) span.textContent = 'Shorts: OFF';
+  }
+}
+
 function createButtonElement() {
   const button = document.createElement('button');
   button.id = 'shortsblock-toggle-btn';
+
+  const channelId = getCurrentChannelId();
+  const isExcluded = channelId ? isChannelExcluded(channelId) : false;
+  const buttonText = isExcluded ? 'Shorts: ON' : 'Shorts: OFF';
+
   button.innerHTML = `
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M10 20H14V4H10V20ZM4 20H8V10H4V20ZM16 9V20H20V9H16Z" fill="currentColor"/>
     </svg>
-    <span>Shorts</span>
+    <span>${buttonText}</span>
   `;
+
+  const bgColor = isExcluded ? 'var(--btn-bg-excluded)' : 'var(--btn-bg)';
 
   button.style.cssText = `
     position: fixed;
@@ -174,7 +257,7 @@ function createButtonElement() {
     align-items: center;
     gap: 8px;
     padding: 12px 20px;
-    background: var(--btn-bg);
+    background: ${bgColor};
     color: var(--btn-color);
     border: none;
     border-radius: 20px;
@@ -214,7 +297,13 @@ function attachButtonPressEffects(button) {
 
 function attachButtonClickHandler(button) {
   button.addEventListener('click', () => {
-    console.log('Shorts toggle clicked'); // TODO
+    const channelId = getCurrentChannelId();
+    const success = toggleChannelExclusion(channelId);
+
+    if (success) {
+      const isExcluded = isChannelExcluded(channelId);
+      updateButtonState(button, isExcluded);
+    }
   });
 }
 
@@ -225,6 +314,10 @@ function attachButtonEventHandlers(button) {
 }
 
 function createToggleButton() {
+  if (document.getElementById('shortsblock-toggle-btn')) {
+    return;
+  }
+
   createButtonStyles();
   const button = createButtonElement();
   attachButtonEventHandlers(button);
