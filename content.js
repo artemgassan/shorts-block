@@ -81,6 +81,52 @@ observer.observe(document.body, { childList: true, subtree: true });
 
 
 
+// ------- ROUTING -------
+
+function isChannelPage() {
+  const pathname = window.location.pathname;
+  const channelPatterns = [
+    /\/@[\w-]+/,           // - youtube.com/@username
+    /\/c\/[\w-]+/,         // - youtube.com/c/channelname
+    /\/channel\/[\w-]+/,   // - youtube.com/channel/UCxxxxxxx
+    /\/user\/[\w-]+/       // - youtube.com/user/username
+  ];
+
+  return channelPatterns.some(pattern => pattern.test(pathname));
+}
+
+function setupRouting() {
+  let button = null;
+
+  function updateButtonVisibility() {
+    if (isChannelPage()) {
+      if (!button || !document.body.contains(button)) {
+        createToggleButton();
+        button = document.getElementById('shortsblock-toggle-btn');
+      }
+    } else {
+      if (button && document.body.contains(button)) {
+        button.remove();
+        button = null;
+      }
+    }
+  }
+
+  updateButtonVisibility();
+
+  let lastUrl = location.href;
+  new MutationObserver(() => {
+    const currentUrl = location.href;
+    if (currentUrl !== lastUrl) {
+      lastUrl = currentUrl;
+      updateButtonVisibility();
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+
+  window.addEventListener('yt-navigate-finish', updateButtonVisibility);
+  window.addEventListener('popstate', updateButtonVisibility);
+}
+
 // ------- LOCAL STORAGE -------
 
 // TODO
@@ -186,7 +232,7 @@ function createToggleButton() {
 }
 
 if (document.body) {
-  createToggleButton();
+  setupRouting();
 } else {
-  window.addEventListener('load', createToggleButton);
+  window.addEventListener('load', setupRouting);
 }
