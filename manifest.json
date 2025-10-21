@@ -5,8 +5,8 @@
     "author": "artemgassan",
     "manifest_version": 3,
     "icons": {
-        "16": "./assets/icons/favicon-16x16.png",
-        "32": "./assets/icons/favicon-32x32.png"
+        "16": "./public/icons/favicon-16x16.png",
+        "32": "./public/icons/favicon-32x32.png"
     },
     "action": {},
     "permissions": ["scripting", "activeTab"],
