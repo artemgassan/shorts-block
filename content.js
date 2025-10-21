@@ -54,6 +54,22 @@ const SECTION_SELECTORS = SELECTORS.sections.join(',');
 
 
 
+// ------- CORE -------
+
+function startScript() {
+  hideShorts();
+  observeShorts();
+  setupRouting();
+}
+
+if (document.body) {
+  startScript();
+} else {
+  window.addEventListener('load', startScript);
+}
+
+
+
 // ------- HIDING SHORTS -------
 
 function hideShorts() {
@@ -74,10 +90,10 @@ function hideShorts() {
   }
 }
 
-hideShorts();
-
-const observer = new MutationObserver(hideShorts);
-observer.observe(document.body, { childList: true, subtree: true });
+function observeShorts() {
+  const observer = new MutationObserver(hideShorts);
+  observer.observe(document.body, { childList: true, subtree: true });
+}
 
 
 
@@ -322,10 +338,4 @@ function createToggleButton() {
   const button = createButtonElement();
   attachButtonEventHandlers(button);
   document.body.appendChild(button);
-}
-
-if (document.body) {
-  setupRouting();
-} else {
-  window.addEventListener('load', setupRouting);
 }
